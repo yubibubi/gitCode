@@ -1,0 +1,310 @@
+#include<iostream>
+#include<cstring>
+#include<vector>
+#include<list>
+using namespace std;
+class result
+{
+private:
+    string str="";
+    string s;
+    int num;
+    string fuhao = " ";
+    int fei = -1;//判断有无‘非’，1有-1无
+    int M;//总（头）
+    string tf = { "FT" };
+
+public:
+    result(string s, int n) :s(s),num(n)
+    {
+        int f = 0;//判断有无'^',0无1有
+        int ff = 0;//判断有无'~',0无1有
+        for (int i = 0; i < s.length(); i++) {
+            if (s[i] == '^') //单条件转非合析
+            {
+                f = 1;
+                int r = 0;
+                int l = 0;
+                int j = i;
+                while (--j >= 0) {
+                    if (s[j] == ')')r++;
+                    if (s[j] == '(') {
+                        l++;
+                        if (l == r) {
+                            str = s.substr(0, j) + "!" + s.substr(j, i - j);
+                            break;
+                        }
+                    }
+                    if (s[i - 1] != ')') {
+                        str = s.substr(0, i - 1) + "!" + s.substr(i - 1, 1);
+                        break;
+                    }
+                }
+                str = str + "|" + s.substr(i + 1);
+            }
+        }
+    
+        for (int i = 0; i < s.length(); i++) {//双条件转非合析
+            if (f == 0)str = s;
+            if(str[i] == '~')
+            {
+                ff = 1;
+                int r = 0;
+                int l = 0;
+                int j = i;
+                string lelement;//左元素命题
+                string relement;//右元素命题
+                int lmark;//记录双条件影响范围
+                int rmark;
+                while (--j >= 0) {//找左元素
+                    if (str[j] == ')')r++;
+                    if (str[j] == '(') {
+                        l++;
+                        if (l == r){
+                            lelement = str.substr(j, i);
+                            lmark = j;
+                            break;
+                        }
+                    }
+                    if (str[i - 1] != ')') {
+                        lelement = str[i - 1];
+                        lmark = i - 1;
+                        break;
+                    }
+                }
+
+                r = 0;
+                l = 0;
+                j = i;
+                while (++j < str.length()) {//右元素
+                    if (str[j] == '(')l++;
+                    if (str[j] == ')') {
+                        r++;
+                        if (l == r)relement = str.substr(i + 1, j + 1);
+                        rmark = j;
+                        break;
+                    }
+                    if (str[i + 1] != '(') {
+                        relement = str[i + 1];
+                        rmark = i + 1;
+                        break;
+                    }
+                }
+                str = str.substr(0, lmark) + "(" + lelement + "&" + relement + ")|(!" + lelement + "&!" + relement + ")" + str.substr(rmark + 1, str.length());
+            }
+        }
+        
+        if (f == 0 && ff == 0)str = s;
+    }
+
+    int judge(int m, string fu, int q) {
+        if (fu == "|")return m || q;
+        if (fu == "&")return m && q;
+        if (fu == " ")return q;
+    }
+
+    int simple(int P, int Q = 0, int R = 0) {//利用递归求取已转化为由括号、否定、析取、合取
+        int p = P;
+        int q = Q;
+        int r = R;
+        int kuo_l = 0;
+        int kuo_r = 0;
+        int kuo_num;
+        int j;
+
+        fei = -1;//重设初始值以判断剩余变元
+        for (int i = 0; i < str.length(); i++) {//遍历字符串
+            if (str[i] == '!')fei = fei * (-1);//符号位判断
+            if (str[i] == '|')fuhao = "|";
+            if (str[i] == '&')fuhao = "&";
+
+            if (str[i] == ')') {
+                fuhao = " ";
+                return M;
+            }
+            if (str[i] == '(') {
+                kuo_num = result(str.substr(i + 1, str.length()), num).simple(p, q, r);
+                if (fei == 1)M = judge(M, fuhao, !kuo_num);
+                else M = judge(M, fuhao, kuo_num);
+                fei = -1;
+                while (str[++i] != ')');
+            }
+
+            if (str[i] == 'P') {
+                if (fei == 1)M = judge(M, fuhao, !p);
+                else M = judge(M, fuhao, p);
+                fei = -1;
+            }
+            if (str[i] == 'Q') {
+                if (fei == 1)M = judge(M, fuhao, !q);
+                else M = judge(M, fuhao, q);
+                fei = -1;
+            }
+            if (str[i] == 'R') {
+                if (fei == 1)M = judge(M, fuhao, !r);
+                else M = judge(M, fuhao, r);
+                fei = -1;
+            }
+        }
+
+        fuhao = " ";
+        return M;
+    }
+
+    void printft() {
+        if (num == 1){
+            cout << "P" << '\t' << str << endl;
+            for (int P = 0; P < 2; P++) {
+                cout << tf[P] << '\t' << tf[simple(P)] << endl;
+            }
+        }
+        if (num == 2) {
+            cout << "P" << '\t' << "Q" << '\t' << str << endl;
+            for (int P = 0; P < 2; P++) {
+                for (int Q = 0; Q < 2; Q++) {
+                    cout << tf[P] << '\t' << tf[Q] << '\t' << tf[simple(P, Q)] << endl;
+                }
+            }
+        }
+        if (num == 3) {
+            cout << "P" << '\t' << "Q" << '\t' << "R" << '\t' << str << endl;
+            for (int P = 0; P < 2; P++) {
+                for (int Q = 0; Q < 2; Q++)
+                    for (int R = 0; R < 2; R++) {
+                        cout << tf[P] << '\t' << tf[Q] << '\t' << tf[R] << '\t' << tf[simple(P, Q, R)] << endl;
+                    }
+            }
+        }
+    }
+
+    void xiqu_hequ() 
+    {
+        string p;
+        string q;
+        string r;
+        if (num == 1) {            
+            cout << "主析取范式：" << endl;
+            for (int P = 0; P < 2; P++) {
+                if (simple(P) == 1) {
+                    if (P == 0)p = "!P";
+                    else p = "P";
+
+                    cout << "(" << p << ")" << "∨";
+                }
+            }
+            cout << "\b\b" << "  " << endl;
+            cout << "主合取范式：" << endl;
+            for (int P = 0; P < 2; P++) {
+                if (simple(P) == 0) {
+                    if (P == 0)p = "!P";
+                    else p = "P";
+
+                    cout << "(" << p << ")" << "∧";
+                }
+            }
+            cout << "\b\b" << "  " << endl;
+        }
+
+        if (num == 2) {
+            cout << "主合取范式:" << endl;
+            for (int P = 0; P < 2; P++) {
+                for (int Q = 0; Q < 2; Q++) {
+                    if (simple(P, Q) == 0) {
+                        if (P == 0)p = "!P";
+                        else p = "P";
+                        if (Q == 0)q = "!Q";
+                        else q = "Q";
+
+                        cout << "(" << p << "∨" << q << ")" << "∧";
+                    }
+                }
+            }
+            cout << "\b\b" << "  " << endl;
+            cout << "主析取范式:" << endl;
+            for (int P = 0; P < 2; P++) {
+                for (int Q = 0; Q < 2; Q++) {
+                    if (simple(P, Q) == 1) {
+                        if (P == 0)p = "!P";
+                        else p = "P";
+                        if (Q == 0)q = "!Q";
+                        else q = "Q";
+
+                        cout << "(" << p << "∧" << q << ")" << "∨";
+                    }
+                }
+            }
+            cout << "\b\b" << "  " << endl;
+        }
+
+        if (num == 3) {
+            cout << "主析取范式:" << endl;
+            for (int P = 0; P < 2; P++) {
+                for (int Q = 0; Q < 2; Q++) {
+                    for (int R = 0; R < 2; R++) {
+                        if (simple(P, Q, R) == 1) {
+                            if (P == 0)p = "!P";
+                            else p = "P";
+                            if (Q == 0)q = "!Q";
+                            else q = "Q";
+                            if (R == 0)r = "!R";
+                            else r = "R";
+
+                            cout << "(" << p << "∧" << q << "∧" << r << ")" << "∨";
+                        }
+                    }
+                }
+            }
+            cout << "\b\b" << "  " << endl;
+            cout << "主合取范式:" << endl;
+            for (int P = 0; P < 2; P++) {
+                for (int Q = 0; Q < 2; Q++) {
+                    for (int R = 0; R < 2; R++) {
+                        if (simple(P, Q, R) == 0) {
+                            if (P == 0)p = "!P";
+                            else p = "P";
+                            if (Q == 0)q = "!Q";
+                            else q = "Q";
+                            if (R == 0)r = "!R";
+                            else r = "R";
+
+                            cout << "(" << p << "∨" << q << "∨" << r << ")" << "∧";
+                        }
+                    }
+                }
+            }
+            cout << "\b\b" << "  " << endl;
+        }
+    }
+};
+
+
+int main() {
+    int num;
+    string max1;
+    bool tf[2] = { false ,true };
+    cout << "用!表示否定" << endl;
+    cout << "用|表示析取" << endl;
+    cout << "用&表示合取" << endl;
+    cout << "用^表示条件" << endl;
+    cout << "用~表示双条件" << endl;
+    cout << "请用PQR三个字母代表变元" << endl;
+    cout << "请输入变元个数(<=3)：" << endl;
+    cin >> num;
+    cout << "请输入合式公式(P/Q/R)：" << endl;
+    cin >> max1;
+
+    result re(max1, num);
+    re.printft();
+    re.xiqu_hequ();
+}
+
+
+
+//日志
+//问题：在xiqu_hequ函数中simple函数无法得出真确值,似乎是simple函数未完善
+//问题解决：经调试发现是return M时没有将fuhao的值变为" "
+//问题：退格符无法消除符号∧∨
+//问题解决：经尝试，发现合取析取符号站两个符号位，需要用两个退格符"\b\b"加两个空格"  "来消除
+//2020/9/30
+//问题：单条件、双条件处有问题
+//设想：应该单独处理再拼接！
